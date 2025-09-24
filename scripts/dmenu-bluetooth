@@ -1,0 +1,326 @@
+
+
+#!/usr/bin/env bash
+# Bluetooth menu with dmenu (fixed & cleaned)
+# Depends: dmenu, bluez-utils (bluetoothctl), rfkill
+
+divider="---------"
+goback="Back"
+
+power_on() {
+    bluetoothctl show | grep -q "Powered: yes"
+}
+
+toggle_power() {
+    if power_on; then
+        bluetoothctl power off
+    else
+        if rfkill list bluetooth | grep -q 'blocked: yes'; then
+            rfkill unblock bluetooth && sleep 3
+        fi
+        bluetoothctl power on
+    fi
+    show_menu
+}
+
+scan_on() {
+    if bluetoothctl show | grep -q "Discovering: yes"; then
+        echo "Scan: on"
+        return 0
+    else
+        echo "Scan: off"
+        return 1
+    fi
+}
+
+toggle_scan() {
+    if bluetoothctl show | grep -q "Discovering: yes"; then
+        pkill -f "bluetoothctl scan on" 2>/dev/null || true
+        bluetoothctl scan off
+    else
+        bluetoothctl scan on &
+        sleep 5
+    fi
+    show_menu
+}
+
+pairable_on() {
+    if bluetoothctl show | grep -q "Pairable: yes"; then
+        echo "Pairable: on"
+        return 0
+    else
+        echo "Pairable: off"
+        return 1
+    fi
+}
+
+toggle_pairable() {
+    if bluetoothctl show | grep -q "Pairable: yes"; then
+        bluetoothctl pairable off
+    else
+        bluetoothctl pairable on
+    fi
+    show_menu
+}
+
+discoverable_on() {
+    if bluetoothctl show | grep -q "Discoverable: yes"; then
+        echo "Discoverable: on"
+        return 0
+    else
+        echo "Discoverable: off"
+        return 1
+    fi
+}
+
+toggle_discoverable() {
+    if bluetoothctl show | grep -q "Discoverable: yes"; then
+        bluetoothctl discoverable off
+    else
+        bluetoothctl discoverable on
+    fi
+    show_menu
+}
+
+device_connected() {
+    bluetoothctl info "$1" | grep -q "Connected: yes"
+}
+
+toggle_connection() {
+    mac="$1"
+    if device_connected "$mac"; then
+        bluetoothctl disconnect "$mac"
+    else
+        bluetoothctl connect "$mac"
+    fi
+    # refresh submenu for this device
+    device_menu "$mac"
+}
+
+device_paired() {
+    bluetoothctl info "$1" | grep -q "Paired: yes" && echo "Paired: yes" || echo "Paired: no"
+}
+
+toggle_paired() {
+    mac="$1"
+    if bluetoothctl info "$mac" | grep -q "Paired: yes"; then
+        bluetoothctl remove "$mac"
+    else
+        bluetoothctl pair "$mac"
+    fi
+    device_menu "$mac"
+}
+
+device_trusted() {
+    bluetoothctl info "$1" | grep -q "Trusted: yes" && echo "Trusted: yes" || echo "Trusted: no"
+}
+
+toggle_trust() {
+    mac="$1"
+    if bluetoothctl info "$mac" | grep -q "Trusted: yes"; then
+        bluetoothctl untrust "$mac"
+    else
+        bluetoothctl trust "$mac"
+    fi
+    device_menu "$mac"
+}
+
+print_status() {
+    if power_on; then
+        printf ''
+        # prefer `devices Paired`, fallback to `paired-devices`
+        paired_devices_cmd="devices Paired"
+        if ! bluetoothctl $paired_devices_cmd >/dev/null 2>&1 ; then
+            paired_devices_cmd="paired-devices"
+        fi
+        mapfile -t paired_devices < <(bluetoothctl $paired_devices_cmd | grep Device | awk '{print $2}')
+        counter=0
+        for device in "${paired_devices[@]}"; do
+            if device_connected "$device"; then
+                device_alias=$(bluetoothctl info "$device" | awk -F': ' '/Alias/ {print $2; exit}')
+                if [ $counter -gt 0 ]; then
+                    printf ", %s" "$device_alias"
+                else
+                    printf " %s" "$device_alias"
+                fi
+                ((counter++))
+            fi
+        done
+        printf "\n"
+    else
+        echo ""
+    fi
+}
+
+# device_menu now expects a MAC address (eg "AA:BB:CC:DD:EE:FF")
+device_menu() {
+    mac="$1"
+    # if mac empty, return
+    [ -z "$mac" ] && return
+
+    device_name=$(bluetoothctl info "$mac" | awk -F': ' '/Alias/ {print $2; exit}')
+    [ -z "$device_name" ] && device_name="$mac"
+
+    if device_connected "$mac"; then
+        connected="Connected: yes"
+    else
+        connected="Connected: no"
+    fi
+    paired=$(device_paired "$mac")
+    trusted=$(device_trusted "$mac")
+
+    options="$connected\n$paired\n$trusted\n$divider\n$goback\nExit"
+
+    chosen=$(echo -e "$options" | dmenu -i -l 10 -p "$device_name" -c)
+    # handle cancel
+    [ -z "$chosen" ] && show_menu && return
+
+    case "$chosen" in
+        "$connected") toggle_connection "$mac" ;;
+        "$paired") toggle_paired "$mac" ;;
+        "$trusted") toggle_trust "$mac" ;;
+        "$goback") show_menu ;;
+        Exit) exit 0 ;;
+    esac
+}
+
+show_menu() {
+    if power_on; then
+        power="Power: on"
+        # list device aliases (human-readable) for dmenu
+        devices=$(bluetoothctl devices | sed -n 's/^Device [^ ]* //p')
+        scan=$(scan_on)
+        pairable=$(pairable_on)
+        discoverable=$(discoverable_on)
+        options="$devices\n$divider\n$power\n$scan\n$pairable\n$discoverable\nExit"
+    else
+        power="Power: off"
+        options="$power\nExit"
+    fi
+
+    chosen=$(echo -e "$options" | dmenu -i -l 10 -p "Bluetooth" -c)
+    # if user cancelled or empty, just exit
+    [ -z "$chosen" ] && exit 0
+
+    case "$chosen" in
+        "$power") toggle_power ;;
+        "$scan") toggle_scan ;;
+        "$pairable") toggle_pairable ;;
+        "$discoverable") toggle_discoverable ;;
+        Exit) exit 0 ;;
+        *)
+            # find MAC for the chosen device alias (first match)
+            device_mac=$(bluetoothctl devices | awk -v name="$chosen" 'index($0, name) {print $2; exit}')
+            if [ -n "$device_mac" ]; then
+                device_menu "$device_mac"
+            else
+                # nothing matched, reopen menu
+                show_menu
+            fi
+            ;;
+    esac
+}
+
+case "$1" in
+    --status) print_status ;;
+    *) show_menu ;;
+esac
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

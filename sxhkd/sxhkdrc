@@ -1,0 +1,38 @@
+#app launch
+super + a; {b,t,j,e,n,k,l,c}
+    { \
+      firejail --noprofile --private=~/firefox/empty-sandbox --whitelist=~/firefox/safefolder --net=wlan0 firefox-bin, \
+      pcmanfm, \
+      flatpak run org.signal.Signal, \
+      emacsclient -c -a 'emacs', \
+      iwgtk, \
+      dmenu-bluetooth, \
+      dmenu-logoutmenu, \
+      thorium --class=sgpt --app=https://chess.com, \
+    }
+
+# make sxhkd reload its configuration files:
+super + Escape
+	pkill -USR1 -x sxhkd
+
+
+super + v;
+      clipmenu
+
+super + r;
+  dmenu-desktop
+
+#screenshot
+Print
+  scrot ~/Pictures/Screenshots/$(date +%F-%H_%M_%S).jpg && notify-send 'screenshot taken'
+shift + Print
+  scrot -s ~/Pictures/Screenshots/$(date +%F-%H_%M_%S).jpg && notify-send 'screenshot taken'
+
+#lockscreen
+super + x;
+  slock
+
+#dmenu pass
+super + alt + d;
+  ~/.local/bin/dmenu_pass
+

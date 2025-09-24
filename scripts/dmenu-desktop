@@ -1,0 +1,48 @@
+#!/bin/sh
+
+paplay ~/opt/mixkit-sci-fi-click-900.wav &
+
+background="#2e3440"
+foreground="#d8dee9"
+select_background="#5e81ac"
+select_foreground="#2e3440"
+highpriority="#bf616a"
+font="ComicShannsMono Nerd Font Propo:size=10:style=Medium"
+
+# Default + extra directories jaha desktop files hote hain
+DIRS="$HOME/.local/share/applications \
+/usr/share/applications \
+$HOME/.local/share/flatpak/exports/share/applications 
+# /opt/myapps/desktops"   # 👈 yaha apna custom path add kar de
+
+# Sab desktop files se "Name" nikaalo
+apps=""
+for dir in $DIRS; do
+    [ -d "$dir" ] || continue
+    for file in "$dir"/*.desktop; do
+        [ -f "$file" ] || continue
+        name=$(grep -m1 "^Name=" "$file" | cut -d= -f2-)
+        [ -n "$name" ] && apps="$apps"$'\n'"$name"
+    done
+done
+
+apps=$(printf '%s\n' "$apps" | sort -u)
+
+# Dmenu me list dikhana
+choice=$(printf '%s\n' "$apps" | dmenu -i -nb "$background" -nf "$foreground" -sb "$select_background" -sf "$select_foreground" -l 20 -c -bw 2 -fn "$font")
+[ -z "$choice" ] && exit 0
+
+# User ke choice ke hisaab se Exec command nikaalna
+for dir in $DIRS; do
+    [ -d "$dir" ] || continue
+    for file in "$dir"/*.desktop; do
+        [ -f "$file" ] || continue
+        grep -q "^Name=$choice" "$file" || continue
+        exec_cmd=$(grep -m1 "^Exec=" "$file" | cut -d= -f2-)
+        # Remove desktop-specific placeholders
+        exec_cmd=$(echo "$exec_cmd" | sed 's/ *%[UufFiIckK]//g')
+        [ -n "$exec_cmd" ] && setsid sh -c "$exec_cmd" >/dev/null 2>&1 &
+        exit 0
+    done
+done
+

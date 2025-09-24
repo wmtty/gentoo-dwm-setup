@@ -1,0 +1,71 @@
+
+#!/bin/sh
+
+# CMDs
+uptime="`uptime -p | sed -e 's/up //g'`"
+host=`hostname`
+
+# Options
+shutdown='⏻ Shutdown'
+reboot='󰑐 Reboot'
+lock=' Lock'
+suspend='󰤄 Suspend'
+logout='󰍃 Logout'
+yes='Yes'
+no='No'
+
+# dmenu CMD
+dmenu_cmd() {
+    dmenu -bw 1 -c -l 5-i 
+}
+
+# Confirmation CMD
+confirm_cmd() {
+    echo -e "$yes\n$no" | dmenu -i -p "Are you sure?"
+}
+
+# Ask for confirmation
+confirm_exit() {
+    confirm_cmd
+}
+
+# Pass variables to dmenu
+run_dmenu() {
+    echo -e "$lock\n$suspend\n$logout\n$reboot\n$shutdown" | dmenu_cmd
+}
+
+# Execute commands
+run_cmd() {
+    action="$1"
+    selected="$(confirm_exit)"
+
+    if [ "$selected" = "$yes" ]; then
+        case "$action" in
+            --shutdown)
+                loginctl poweroff
+                ;;
+            --reboot)
+                loginctl reboot
+                ;;
+            --suspend)
+                loginctl suspend
+                ;;
+            --logout)
+                pkill dwm
+                ;;
+        esac
+    fi
+}
+
+
+
+# Actions
+chosen="$(run_dmenu)"
+
+case "$chosen" in
+    "$shutdown") run_cmd --shutdown ;;
+    "$reboot")   run_cmd --reboot ;;
+    "$lock")     slock ;;
+    "$suspend")  run_cmd --suspend ;;
+    "$logout")   run_cmd --logout ;;
+esac

@@ -1,0 +1,70 @@
+#+TITLE: DWM Setup
+#+AUTHOR: ak
+#+DATE: 2025-09-23
+#+DESCRIPTION: DWM setup for gentoo.
+
+#+CAPTION: My dwm desktop screenshot
+#+ATTR_ORG: :width 600
+[[file:images/desktop.jpg]]
+
+
+* Overview
+This repository contains a DWM setup, including:
+- dwm (window manager)
+- dmenu (application launcher)
+- slock (lock screen)
+- slstatus (status bar)
+- dunst (notification daemon)
+- sxhkd (hotkey daemon)
+
+The installation script automates setup, config copying, and script installation.
+
+* Requirements
+- Linux system
+- Build tools: gcc, make, X11 development libraries
+- working xorg setup must be there
+
+* Installation
+All steps are automated via the provided install.sh script. Run the following from the repository:
+
+#+BEGIN_SRC bash
+git clone
+chmod +x install.sh
+./install.sh
+#+END_SRC
+
+This will:
+- Compile and install dwm, dmenu, slock, slstatus
+- Copy dunst configuration to ~/.config/dunst/dunstrc
+- Copy sxhkd configuration to ~/.config/sxhkd/sxhkdrc
+- Install helper scripts (dmenu-* to ~/.local/bin, .xinitrc to ~/, x11autostart.sh to ~/.config/auto)
+
+* Configuration
+** Themes
+- dwm themes are located in dwm/themes/
+- The active theme is included in config.h via relative include, e.g. #include "themes/nord.h"
+
+** dunst
+- dunstrc configuration is copied to ~/.config/dunst/
+- Existing configurations are backed up automatically as dunstrc.bak
+
+** sxhkd
+- sxhkdrc configuration is copied to ~/.config/sxhkd/
+- Existing configurations are backed up automatically as sxhkdrc.bak
+
+* Scripts
+- dmenu-desktop: Launch desktop entries via dmenu
+- dmenu-logoutmenu: Simple logout menu
+- dmenu-bluetooth: Connect to Bluetooth devices via dmenu
+- x11autostart.sh: Autostart script for dwm sessions
+- .xinitrc: Startx configuration to launch dwm
+
+* Notes
+- The install script is verbose and color-coded for easy debugging
+- One-time sudo session is used to install tools
+- All config files and scripts are installed from the repository working directory
+- Backup of existing configurations is automatic
+- Make sure to install dependency
+
+* License
+Include your license info here (e.g., MIT License)
