@@ -33,7 +33,7 @@ The installation script automates setup, config copying, and script installation
 All steps are automated via the provided install.sh script. Run the following from the repository:
 
 #+BEGIN_SRC bash
-git clone
+git clone https://github.com/wmtty/gentoo-dwm-setup.git
 chmod +x install.sh
 ./install.sh
 #+END_SRC
