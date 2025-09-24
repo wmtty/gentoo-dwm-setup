@@ -3,9 +3,14 @@
 #+DATE: 2025-09-23
 #+DESCRIPTION: DWM setup for gentoo.
 
-#+CAPTION: My dwm desktop screenshot
-#+ATTR_ORG: :width 600
-[[file:images/desktop.jpg]]
+* Screenshots :screenshot:
+
+#+CAPTION: Collage of 4 screenshots
+| [[file:images/desktop1.jpg]] | [[file:images/desktop2.jpg]] |
+| [[file:images/desktop3.jpg]] | [[file:images/desktop4.jpg]] |
+
+#+ATTR_ORG: :width 250
+
 
 
 * Overview
