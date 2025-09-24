@@ -70,6 +70,3 @@ This will:
 - All config files and scripts are installed from the repository working directory
 - Backup of existing configurations is automatic
 - Make sure to install dependency
-
-* License
-Include your license info here (e.g., MIT License)
